@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package fraud_engine;
+package shared_contracts;
 
 service RiskEngine {
   rpc ScoreTransaction(TransactionRequest) returns (ScoreDecision);

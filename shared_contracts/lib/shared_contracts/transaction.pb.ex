@@ -1,9 +1,9 @@
-defmodule FraudEngine.Verdict do
+defmodule SharedContracts.Verdict do
   @moduledoc false
 
   use Protobuf,
     enum: true,
-    full_name: "fraud_engine.Verdict",
+    full_name: "shared_contracts.Verdict",
     protoc_gen_elixir_version: "0.17.0",
     syntax: :proto3
 
@@ -12,11 +12,11 @@ defmodule FraudEngine.Verdict do
   field :DECLINE, 2
 end
 
-defmodule FraudEngine.TransactionRequest.MetadataEntry do
+defmodule SharedContracts.TransactionRequest.MetadataEntry do
   @moduledoc false
 
   use Protobuf,
-    full_name: "fraud_engine.TransactionRequest.MetadataEntry",
+    full_name: "shared_contracts.TransactionRequest.MetadataEntry",
     map: true,
     protoc_gen_elixir_version: "0.17.0",
     syntax: :proto3
@@ -25,11 +25,11 @@ defmodule FraudEngine.TransactionRequest.MetadataEntry do
   field :value, 2, type: :string
 end
 
-defmodule FraudEngine.TransactionRequest do
+defmodule SharedContracts.TransactionRequest do
   @moduledoc false
 
   use Protobuf,
-    full_name: "fraud_engine.TransactionRequest",
+    full_name: "shared_contracts.TransactionRequest",
     protoc_gen_elixir_version: "0.17.0",
     syntax: :proto3
 
@@ -44,37 +44,37 @@ defmodule FraudEngine.TransactionRequest do
 
   field :metadata, 9,
     repeated: true,
-    type: FraudEngine.TransactionRequest.MetadataEntry,
+    type: SharedContracts.TransactionRequest.MetadataEntry,
     map: true
 end
 
-defmodule FraudEngine.ScoreDecision do
+defmodule SharedContracts.ScoreDecision do
   @moduledoc false
 
   use Protobuf,
-    full_name: "fraud_engine.ScoreDecision",
+    full_name: "shared_contracts.ScoreDecision",
     protoc_gen_elixir_version: "0.17.0",
     syntax: :proto3
 
   field :transaction_id, 1, type: :string, json_name: "transactionId"
-  field :verdict, 2, type: FraudEngine.Verdict, enum: true
+  field :verdict, 2, type: SharedContracts.Verdict, enum: true
   field :provisional, 3, type: :bool
 end
 
-defmodule FraudEngine.RiskEngine.Service do
+defmodule SharedContracts.RiskEngine.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "fraud_engine.RiskEngine", protoc_gen_elixir_version: "0.17.0"
+  use GRPC.Service, name: "shared_contracts.RiskEngine", protoc_gen_elixir_version: "0.17.0"
 
-  rpc :ScoreTransaction, FraudEngine.TransactionRequest, FraudEngine.ScoreDecision
+  rpc :ScoreTransaction, SharedContracts.TransactionRequest, SharedContracts.ScoreDecision
 
   rpc :StreamTransactions,
-      stream(FraudEngine.TransactionRequest),
-      stream(FraudEngine.ScoreDecision)
+      stream(SharedContracts.TransactionRequest),
+      stream(SharedContracts.ScoreDecision)
 end
 
-defmodule FraudEngine.RiskEngine.Stub do
+defmodule SharedContracts.RiskEngine.Stub do
   @moduledoc false
 
-  use GRPC.Stub, service: FraudEngine.RiskEngine.Service
+  use GRPC.Stub, service: SharedContracts.RiskEngine.Service
 end
