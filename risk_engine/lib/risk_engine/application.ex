@@ -8,8 +8,8 @@ defmodule RiskEngine.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: RiskEngine.Worker.start_link(arg)
-      # {RiskEngine.Worker, arg}
+      {GRPC.Server.Supervisor,
+       endpoint: RiskEngine.GRPC.Endpoint, port: 50051, start_server: true}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
