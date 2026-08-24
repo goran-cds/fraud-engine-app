@@ -1,0 +1,32 @@
+{
+  "type": "record",
+  "name": "Transaction",
+  "namespace": "com.fraud_engine",
+  "fields": [
+    { "name": "transaction_id", "type": "string" },
+    { "name": "account_id", "type": "string" },
+    { "name": "amount_cents", "type": "long" },
+    { "name": "currency", "type": "string" },
+    { "name": "merchant_id", "type": "string" },
+    { "name": "ip_address", "type": "string" },
+    { "name": "device_fingerprint", "type": "string" },
+    {
+      "name": "timestamp",
+      "type": { "type": "long", "logicalType": "timestamp-millis" }
+    },
+    {
+      "name": "metadata",
+      "type": { "type": "map", "values": "string" },
+      "default": {}
+    },
+    {
+      "name": "fast_path_verdict",
+      "type": {
+        "type": "enum",
+        "name": "Verdict",
+        "symbols": ["APPROVE", "REVIEW", "DECLINE"]
+      }
+    },
+    { "name": "provisional", "type": "boolean", "default": true }
+  ]
+}

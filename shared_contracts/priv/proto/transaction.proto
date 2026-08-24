@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package fraud_engine;
+
+service RiskEngine {
+  rpc ScoreTransaction(TransactionRequest) returns (ScoreDecision);
+  rpc StreamTransactions(stream TransactionRequest) returns (stream ScoreDecision);
+}
+
+message TransactionRequest {
+  string transaction_id = 1;
+  string account_id = 2;
+  int64 amount_cents = 3;
+  string currency = 4;
+  string merchant_id = 5;
+  string ip_address = 6;
+  string device_fingerprint = 7;
+  int64 timestamp = 8;
+  map<string, string> metadata = 9;
+}
+
+message ScoreDecision {
+  string transaction_id = 1;
+  Verdict verdict = 2;
+  bool provisional = 3;
+}
+
+enum Verdict {
+  APPROVE = 0;
+  REVIEW = 1;
+  DECLINE = 2;
+}
