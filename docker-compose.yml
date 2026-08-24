@@ -1,0 +1,75 @@
+name: fraud-engine-app
+services:
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      # Unique ID for this broker/controller node in the cluster
+      # We could also provide a CLUSTER_ID, but a default auto-generated one is always supplied
+      # It's just `1` since we have a single-node setup
+      KAFKA_NODE_ID: 1 
+      # We tell this node to act as both a message broker and a controller
+      KAFKA_PROCESS_ROLES: broker,controller
+      # Defines which interfaces/ports Kafka listens on inside the container - plaintext is for unencrypted, unauthenticated
+      # (port 9092 is client traffic from the host machine, 29092 is client traffic from other containers, 9093 is controller internal traffic)
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_INTERNAL://:29092,CONTROLLER://:9093
+      # The address Kafka tells clients to connect to - localhost:9092 for tools running on the host,
+      # kafka:29092 for other containers on fraud-engine-app-network (their own "localhost" isn't this container)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      # Maps our custom PLAINTEXT_INTERNAL listener name to an actual protocol, since Kafka only infers this automatically for standard names
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - fraud-engine-app-network
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "default"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    # Override the container's resource limits, normally these numbers are quiet low I believe, here we raise the limit on open file descriptors
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      - fraud-engine-app-network
+
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:latest
+    container_name: openobserve
+    ports:
+      - "5080:5080"
+    volumes:
+      - openobserve_data:/data
+    environment:
+      ZO_ROOT_USER_EMAIL: root@example.com
+      ZO_ROOT_USER_PASSWORD: "default"
+    networks:
+      - fraud-engine-app-network
+
+networks:
+  fraud-engine-app-network:
+    driver: bridge
+
+volumes:
+  kafka_data:
+  clickhouse_data:
+  clickhouse_logs:
+  openobserve_data:
+
