@@ -33,7 +33,8 @@ defmodule ClientSimulator do
       merchant_id: random_id("merch"),
       ip_address: "203.0.113.#{Enum.random(1..254)}",
       device_fingerprint: random_id("dev"),
-      timestamp: System.os_time(:second),
+      # required by Avro schema to be milliseconds
+      timestamp: System.os_time(:millisecond),
       metadata: %{"channel" => "web"}
     }
   end
