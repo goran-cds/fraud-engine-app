@@ -8,8 +8,7 @@ defmodule ClientSimulator.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: ClientSimulator.Worker.start_link(arg)
-      # {ClientSimulator.Worker, arg}
+      {GRPC.Client.Supervisor, []}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
