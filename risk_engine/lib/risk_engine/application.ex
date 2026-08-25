@@ -9,7 +9,9 @@ defmodule RiskEngine.Application do
   def start(_type, _args) do
     children = [
       {GRPC.Server.Supervisor,
-       endpoint: RiskEngine.GRPC.Endpoint, port: 50051, start_server: true}
+       endpoint: RiskEngine.GRPC.Endpoint, port: 50051, start_server: true},
+      {Task.Supervisor, name: RiskEngine.TaskSupervisor},
+      Avrora
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
