@@ -9,6 +9,7 @@ defmodule StreamProcessor.Application do
   def start(_type, _args) do
     children = [
       Avrora,
+      StreamProcessor.Infra.ClickhouseClient,
       StreamProcessor.Infra.KafkaConsumer
     ]
 

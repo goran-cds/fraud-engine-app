@@ -30,6 +30,7 @@ defmodule StreamProcessor.Infra.KafkaConsumer do
     case decode_avro(message.data) do
       {:ok, decoded} ->
         Logger.info("consumed transaction: #{inspect(decoded)}")
+        StreamProcessor.persist_transaction(decoded)
         Broadway.Message.update_data(message, fn _ -> decoded end)
 
       {:error, reason} ->
