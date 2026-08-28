@@ -1,29 +1,23 @@
 defmodule RiskEngine.GRPC.Server do
   use GRPC.Server, service: SharedContracts.RiskEngine.Service
 
-  alias SharedContracts.ScoreDecision
   alias RiskEngine.Infra.KafkaProducer
+  alias RiskEngine.Validator.Verifier
 
   def score_transaction(request, _stream) do
-    decision = mock_approve(request.transaction_id)
+    decision = Verifier.validate(request)
+
     produce_async(request, decision)
     decision
   end
 
   def stream_transactions(request_stream, stream) do
     Enum.each(request_stream, fn request ->
-      decision = mock_approve(request.transaction_id)
+      decision = Verifier.validate(request)
+
       produce_async(request, decision)
       GRPC.Server.send_reply(stream, decision)
     end)
-  end
-
-  defp mock_approve(transaction_id) do
-    %ScoreDecision{
-      transaction_id: transaction_id,
-      verdict: :APPROVE,
-      provisional: true
-    }
   end
 
   defp produce_async(request, decision) do

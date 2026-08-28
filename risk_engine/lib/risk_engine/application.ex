@@ -11,7 +11,10 @@ defmodule RiskEngine.Application do
       {GRPC.Server.Supervisor,
        endpoint: RiskEngine.GRPC.Endpoint, port: 50051, start_server: true},
       {Task.Supervisor, name: RiskEngine.TaskSupervisor},
-      Avrora
+      Avrora,
+      RiskEngine.Cache.Blocklist,
+      RiskEngine.Cache.SeenAccounts,
+      RiskEngine.Cache.Velocity
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
