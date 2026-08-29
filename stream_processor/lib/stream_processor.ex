@@ -4,15 +4,19 @@ defmodule StreamProcessor do
   """
 
   alias StreamProcessor.Infra.ClickhouseClient
+  alias StreamProcessor.Validator.Verifier
 
   require Logger
 
   @doc """
-  Takes a decoded transaction, builds a ClickHouse row from it, and persists it.
+  Takes a decoded transaction, scores it against the heavy-path rules, builds the ClickHouse row
+  with the final combined verdict, and persists it.
   """
   @spec persist_transaction(map()) :: :ok | {:error, term()}
   def persist_transaction(decoded) do
-    case ClickhouseClient.insert_transaction(to_clickhouse_row(decoded)) do
+    score = Verifier.validate(decoded["fast_path_verdict"], decoded)
+
+    case ClickhouseClient.insert_transaction(to_clickhouse_row(decoded, score)) do
       :ok ->
         :ok
 
@@ -22,7 +26,7 @@ defmodule StreamProcessor do
     end
   end
 
-  defp to_clickhouse_row(decoded) do
+  defp to_clickhouse_row(decoded, score) do
     %{
       "transaction_id" => decoded["transaction_id"],
       "account_id" => decoded["account_id"],
@@ -34,7 +38,10 @@ defmodule StreamProcessor do
       "timestamp" => DateTime.from_unix!(decoded["timestamp"], :millisecond),
       "metadata" => decoded["metadata"],
       "fast_path_verdict" => decoded["fast_path_verdict"],
-      "provisional" => decoded["provisional"]
+      "heavy_path_verdict" =>
+        score.heavy_path_verdict && Atom.to_string(score.heavy_path_verdict),
+      "verdict" => Atom.to_string(score.verdict),
+      "provisional" => false
     }
   end
 end
