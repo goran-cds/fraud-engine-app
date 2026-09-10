@@ -7,13 +7,15 @@ defmodule StreamProcessor.Infra.KafkaConsumer do
   @schema_name "com.fraud_engine.Transaction"
 
   def start_link(_opts) do
+    config = config()
+
     Broadway.start_link(__MODULE__,
       name: __MODULE__,
       producer: [
         module:
           {BroadwayKafka.Producer,
            [
-             hosts: [localhost: 9092],
+             hosts: "#{config.host}:#{config.port}",
              topics: [@topic],
              group_id: "stream-processor-transaction-consumer"
            ]},
@@ -54,5 +56,14 @@ defmodule StreamProcessor.Infra.KafkaConsumer do
       {:ok, decoded} -> {:ok, decoded}
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  defp config() do
+    config = Application.get_env(:stream_processor, __MODULE__)
+
+    %{
+      host: Keyword.fetch!(config, :kafka_host),
+      port: Keyword.fetch!(config, :kafka_port)
+    }
   end
 end

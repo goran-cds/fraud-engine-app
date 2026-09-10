@@ -1,0 +1,6 @@
+**/_build
+**/deps
+**/deps_local
+**/erl_crash.dump
+.git
+.claude

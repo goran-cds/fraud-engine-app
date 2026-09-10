@@ -63,6 +63,42 @@ services:
     networks:
       - fraud-engine-app-network
 
+  risk-engine:
+    build:
+      context: .
+      dockerfile: risk_engine/Dockerfile
+    image: risk-engine-latest
+    container_name: risk-engine
+    ports:
+      - "50051:50051"
+    environment:
+      KAFKA_HOST: kafka
+      KAFKA_PORT: "29092"
+    depends_on:
+      - kafka
+    networks:
+      - fraud-engine-app-network
+
+  stream-processor:
+    build:
+      context: .
+      dockerfile: stream_processor/Dockerfile
+    image: stream-processor-latest
+    container_name: stream-processor
+    environment:
+      KAFKA_HOST: kafka
+      KAFKA_PORT: "29092"
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+    depends_on:
+      - kafka
+      - clickhouse
+    networks:
+      - fraud-engine-app-network
+
 networks:
   fraud-engine-app-network:
     driver: bridge
