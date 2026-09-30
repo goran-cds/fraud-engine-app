@@ -3,7 +3,7 @@ defmodule ClientSimulator do
   Documentation for `ClientSimulator`.
   """
 
-  alias ClientSimulator.Infra.RiskEngineClient
+  alias ClientSimulator.Otel.GrpcClientWrapper
 
   alias SharedContracts.TransactionRequest
 
@@ -15,13 +15,17 @@ defmodule ClientSimulator do
   """
   @spec run(String.t()) :: any()
   def run(address \\ "localhost:50051") do
-    case RiskEngineClient.score_transaction(transaction(), address) do
+    case GrpcClientWrapper.score_transaction(transaction(), address) do
       {:ok, decision} ->
         Logger.info("ScoreDecision: #{inspect(decision)}")
 
       {:error, reason} ->
         Logger.error("gRPC call failed: #{inspect(reason)}")
     end
+  after
+    # Give the OTel batch processor one cycle to actually export the span above before the
+    # BEAM exits and silently drops it.
+    Process.sleep(300)
   end
 
   defp transaction do

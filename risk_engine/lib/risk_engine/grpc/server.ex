@@ -4,6 +4,8 @@ defmodule RiskEngine.GRPC.Server do
   alias RiskEngine.Infra.KafkaProducer
   alias RiskEngine.Validator.Verifier
 
+  require OpenTelemetry.Tracer, as: Tracer
+
   def score_transaction(request, _stream) do
     decision = Verifier.validate(request)
 
@@ -21,8 +23,31 @@ defmodule RiskEngine.GRPC.Server do
   end
 
   defp produce_async(request, decision) do
+    # The produce call happens on a separate process from this one
+    # OTel context lives in the process dictionary, so it must be captured
+    # here and re-attached inside the task or the produce span would start a new,
+    # disconnected trace instead of nesting under this RPC's span.
+    otel_ctx = OpenTelemetry.Ctx.get_current()
+
     Task.Supervisor.start_child(RiskEngine.TaskSupervisor, fn ->
-      KafkaProducer.produce_transaction_scored(transaction_scored_payload(request, decision))
+      OpenTelemetry.Ctx.attach(otel_ctx)
+
+      :telemetry.span([:risk_engine, :kafka, :produce], %{}, fn ->
+        result =
+          Tracer.with_span "risk_engine.kafka.produce", kind: :producer do
+            headers =
+              []
+              |> :otel_propagator_text_map.inject()
+              |> Enum.map(fn {k, v} -> {k, v} end)
+
+            KafkaProducer.produce_transaction_scored(
+              transaction_scored_payload(request, decision),
+              headers
+            )
+          end
+
+        {result, %{}}
+      end)
     end)
   end
 

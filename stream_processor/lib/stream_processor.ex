@@ -7,6 +7,7 @@ defmodule StreamProcessor do
   alias StreamProcessor.Validator.Verifier
 
   require Logger
+  require OpenTelemetry.Tracer, as: Tracer
 
   @doc """
   Takes a decoded transaction, scores it against the heavy-path rules, builds the ClickHouse row
@@ -16,7 +17,7 @@ defmodule StreamProcessor do
   def persist_transaction(decoded) do
     score = Verifier.validate(decoded["fast_path_verdict"], decoded)
 
-    case ClickhouseClient.insert_transaction(to_clickhouse_row(decoded, score)) do
+    case insert_transaction(to_clickhouse_row(decoded, score)) do
       :ok ->
         :ok
 
@@ -24,6 +25,17 @@ defmodule StreamProcessor do
         Logger.error("failed to persist transaction to ClickHouse: #{inspect(reason)}")
         error
     end
+  end
+
+  defp insert_transaction(row) do
+    :telemetry.span([:stream_processor, :clickhouse, :insert], %{}, fn ->
+      result =
+        Tracer.with_span "stream_processor.clickhouse.insert" do
+          ClickhouseClient.insert_transaction(row)
+        end
+
+      {result, %{}}
+    end)
   end
 
   defp to_clickhouse_row(decoded, score) do

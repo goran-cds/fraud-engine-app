@@ -28,6 +28,19 @@ services:
       - kafka_data:/var/lib/kafka/data
     networks:
       - fraud-engine-app-network
+    
+  kafka-ui: 
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports: 
+      - "8081:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=localCluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
+    depends_on:
+      - kafka
+    networks:
+      - fraud-engine-app-network
 
   clickhouse:
     image: clickhouse/clickhouse-server:latest
@@ -35,6 +48,7 @@ services:
     ports:
       - "8123:8123"
       - "9000:9000"
+      - "9363:9363" # Prometheus metrics endpoint
     environment:
       CLICKHOUSE_DB: default
       CLICKHOUSE_USER: default
@@ -42,6 +56,7 @@ services:
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - clickhouse_logs:/var/log/clickhouse-server
+      - ./clickhouse/config.d/prometheus.xml:/etc/clickhouse-server/config.d/prometheus.xml:ro
     # Override the container's resource limits, normally these numbers are quiet low I believe, here we raise the limit on open file descriptors
     ulimits:
       nofile:
@@ -50,54 +65,132 @@ services:
     networks:
       - fraud-engine-app-network
 
-  openobserve:
-    image: public.ecr.aws/zinclabs/openobserve:latest
-    container_name: openobserve
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    restart: unless-stopped
     ports:
-      - "5080:5080"
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
     volumes:
-      - openobserve_data:/data
-    environment:
-      ZO_ROOT_USER_EMAIL: root@example.com
-      ZO_ROOT_USER_PASSWORD: "default"
-    networks:
-      - fraud-engine-app-network
-
-  risk-engine:
-    build:
-      context: .
-      dockerfile: risk_engine/Dockerfile
-    image: risk-engine-latest
-    container_name: risk-engine
-    ports:
-      - "50051:50051"
-    environment:
-      KAFKA_HOST: kafka
-      KAFKA_PORT: "29092"
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     depends_on:
-      - kafka
-    networks:
-      - fraud-engine-app-network
-
-  stream-processor:
-    build:
-      context: .
-      dockerfile: stream_processor/Dockerfile
-    image: stream-processor-latest
-    container_name: stream-processor
-    environment:
-      KAFKA_HOST: kafka
-      KAFKA_PORT: "29092"
-      CLICKHOUSE_HOST: clickhouse
-      CLICKHOUSE_PORT: "8123"
-      CLICKHOUSE_DB: default
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: default
-    depends_on:
-      - kafka
       - clickhouse
     networks:
       - fraud-engine-app-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    # risk_engine/stream_processor run on the host during dev (for now)
+    # so Prometheus needs host.docker.internal to reach their /metrics ports from inside the container.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - fraud-engine-app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+      - clickhouse
+    networks:
+      - fraud-engine-app-network
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: kafka-exporter
+    command:
+      - "--kafka.server=kafka:29092"
+      - "--kafka.version=3.7.0"
+    ports:
+      - "9308:9308"
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    networks:
+      - fraud-engine-app-network
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node-exporter
+    # Needs the host's network/PID namespace to report host-level (not container-level) metrics.
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    command:
+      - "--path.rootfs=/host"
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    restart: unless-stopped
+    networks:
+      - fraud-engine-app-network
+
+  # <------- Disabled for now -------->
+  # risk-engine:
+  #   build:
+  #     context: .
+  #     dockerfile: risk_engine/Dockerfile
+  #   image: risk-engine-latest
+  #   container_name: risk-engine
+  #   ports:
+  #     - "50051:50051"
+  #   environment:
+  #     KAFKA_HOST: kafka
+  #     KAFKA_PORT: "29092"
+  #   depends_on:
+  #     - kafka
+  #   networks:
+  #     - fraud-engine-app-network
+
+  # stream-processor:
+  #   build:
+  #     context: .
+  #     dockerfile: stream_processor/Dockerfile
+  #   image: stream-processor-latest
+  #   container_name: stream-processor
+  #   environment:
+  #     KAFKA_HOST: kafka
+  #     KAFKA_PORT: "29092"
+  #     CLICKHOUSE_HOST: clickhouse
+  #     CLICKHOUSE_PORT: "8123"
+  #     CLICKHOUSE_DB: default
+  #     CLICKHOUSE_USER: default
+  #     CLICKHOUSE_PASSWORD: default
+  #   depends_on:
+  #     - kafka
+  #     - clickhouse
+  #     - risk-engine
+  #   networks:
+  #     - fraud-engine-app-network
 
 networks:
   fraud-engine-app-network:
@@ -107,5 +200,5 @@ volumes:
   kafka_data:
   clickhouse_data:
   clickhouse_logs:
-  openobserve_data:
+  grafana_data:
 

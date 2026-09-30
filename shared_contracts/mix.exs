@@ -22,7 +22,8 @@ defmodule SharedContracts.MixProject do
   defp deps do
     [
       {:protobuf, "~> 0.15"},
-      {:grpc, "~> 0.11.5"}
+      {:grpc, "~> 0.11.5"},
+      {:opentelemetry_api, "~> 1.5"}
     ]
   end
 end

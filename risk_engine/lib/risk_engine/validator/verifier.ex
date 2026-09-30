@@ -11,6 +11,13 @@ defmodule RiskEngine.Validator.Verifier do
 
   @spec validate(TransactionRequest.t()) :: ScoreDecision.t()
   def validate(transaction_request) do
+    :telemetry.span([:risk_engine, :fraud, :verdict], %{path: :fast}, fn ->
+      decision = do_validate(transaction_request)
+      {decision, %{path: :fast, verdict: decision.verdict}}
+    end)
+  end
+
+  defp do_validate(transaction_request) do
     with {:ok, _} <- BlocklistMatch.validate(transaction_request),
          {:ok, _} <- AmountCeiling.validate(transaction_request),
          {:ok, _} <- NewAccount.validate(transaction_request),

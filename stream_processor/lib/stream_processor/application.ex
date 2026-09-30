@@ -8,6 +8,8 @@ defmodule StreamProcessor.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      # Must be first to capture init telemetry emitted by the children below.
+      StreamProcessor.PromEx,
       Avrora,
       StreamProcessor.Infra.ClickhouseClient,
       StreamProcessor.Infra.KafkaConsumer

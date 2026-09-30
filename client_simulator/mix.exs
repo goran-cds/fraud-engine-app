@@ -23,7 +23,11 @@ defmodule ClientSimulator.MixProject do
   defp deps do
     [
       {:grpc, "~> 0.11.5"},
-      {:shared_contracts, path: "../shared_contracts"}
+      {:shared_contracts, path: "../shared_contracts"},
+      {:opentelemetry_api, "~> 1.5"},
+      {:opentelemetry, "~> 1.7"},
+      {:opentelemetry_exporter, "~> 1.11"},
+      {:opentelemetry_semantic_conventions, "~> 1.27"}
     ]
   end
 end

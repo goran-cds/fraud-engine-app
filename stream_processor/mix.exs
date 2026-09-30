@@ -25,7 +25,13 @@ defmodule StreamProcessor.MixProject do
       {:broadway_kafka, "~> 0.4.4"},
       {:ch, "~> 0.6.0"},
       {:avrora, "~> 0.30"},
-      {:shared_contracts, path: "../shared_contracts"}
+      {:shared_contracts, path: "../shared_contracts"},
+      {:opentelemetry_api, "~> 1.5"},
+      {:opentelemetry, "~> 1.7"},
+      {:opentelemetry_exporter, "~> 1.11"},
+      {:opentelemetry_semantic_conventions, "~> 1.27"},
+      {:prom_ex, "~> 1.12"},
+      {:plug_cowboy, "~> 2.7"}
     ]
   end
 end

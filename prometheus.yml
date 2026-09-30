@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # risk_engine and stream_processor run on the host during dev (for now)
+  # so they're reached via host.docker.internal
+  - job_name: "risk_engine"
+    static_configs:
+      - targets: ["host.docker.internal:9568"]
+
+  - job_name: "stream_processor"
+    static_configs:
+      - targets: ["host.docker.internal:9569"]
+
+  - job_name: "kafka_exporter"
+    static_configs:
+      - targets: ["kafka-exporter:9308"]
+
+  - job_name: "clickhouse"
+    static_configs:
+      - targets: ["clickhouse:9363"]
+
+  # network_mode: host, so it isn't reachable via its container DNS name either.
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["host.docker.internal:9100"]
+
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
