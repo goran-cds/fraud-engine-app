@@ -26,7 +26,7 @@ defmodule RiskEngine.PromEx.Plugins.FraudVerdicts do
           description: "Time to reach a fast-path fraud verdict",
           tags: [:path],
           tag_values: & &1,
-          reporter_options: [buckets: [1, 5, 10, 25, 50, 100, 250, 500, 1000]]
+          reporter_options: [buckets: [0.1, 0.25, 0.5, 1, 5, 10, 25, 50, 100, 250, 500, 1000]]
         )
       ]
     )
