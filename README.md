@@ -78,3 +78,11 @@ This proves that the heavy path doesn't need to keep pace with the fast path. A 
 So, a sustained load would build lag. The backlog would grow by about 125 messages per second (or 7500 per minute).
 The burst tests so far can't tell where the limit sits, only how big it is. We might be able to see the limit in the following tests. 
 
+## TODO Measurements
+
+- Heavy path and insert latency
+- ClickHouse part_log (write amplification)
+- ClickHouse query_log and resource pressure
+- Whole-gRPC latency
+- ETS sizes and processing lag
+- Stress test
